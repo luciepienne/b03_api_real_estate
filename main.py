@@ -1,67 +1,98 @@
 from fastapi import FastAPI, HTTPException
 import uvicorn
 import sqlite3
+from fuzzywuzzy import fuzz 
 
 app = FastAPI()
 
 db = "Chinook.db"
 con = sqlite3.connect(db)
 
-# we validate the figure of the year and make sure it is a 4 digits and integer. 
-# # The raise HTTPException is mandatory to avoid crashing the system with data not ok.
-
+# Def validate_year as a year of 4 digits and integer.
+ 
 def validate_year(year: str): 
     if not year.isdigit() or not (len(year) == 4) :
-        raise HTTPException(status_code=400, detail="L'année doit être une valeur numérique de 4 chiffres")
+        raise HTTPException(status_code=400, detail="The year should be a 4 digit number")
     return int(year)
-    
-@app.get("/revenu_fiscal_moyen/")
-async def revenu_fiscal_moyen(year: str, city: str):
-    # Utilisez la valeur validée de l'année dans votre logique de traitement
-    year = validate_year(year)
-    cur = con.cursor()
-    req = f"SELECT revenu_fiscal_moyen, date, ville FROM foyers_fiscaux WHERE date LIKE '%{year}%' AND ville LIKE '{city}%'"
-    cur.execute(req)    
-    result = cur.fetchall()  # Récupère les résultats de la requête
+
+# Def valid_number as an integer. 
+
+def valid_number(n: str): 
+    if not n.isdigit() :
+        raise HTTPException(status_code=400, detail="The given data is not an integer")
+    return int(n)
+
+# # Def valid building type as appartement or maison or looking like. 
+
+def validate_build_type(building_type: str): 
+    valid_building_types = ['APPARTEMENT', 'MAISON']
+    most_similar_building_type = max(valid_building_types, key=lambda x: fuzz.ratio(building_type.upper(), x))
+    if most_similar_building_type not in valid_building_types:
+        raise HTTPException(status_code=400, detail="The given type is not an 'appartement' or a 'maison'")
+    return most_similar_building_type
+
+# Def execute_result_query_SQL as cursor fetchall and result exception condition
+
+def execute_result_query_SQL(con, query):
+    cur=con.cursor()
+    cur.execute(query)
+    result = cur.fetchall()
     if result is None or len(result) == 0:
-        raise HTTPException(status_code=400, detail='Aucune valeur')
-    if len(result) == 1:
-        return result[0][0]
-    else:
-        return {r[2]: r[0] for r in result}
-    #if result is None:
-    #    return  "No data found for city {city} in year {year}"
-    #else:
-     #   return {r[2]: r[0] for r in result}
- #con.close()  # Ferme la connexion à la base de données 
+        raise HTTPException(status_code=400, detail="Your query has no result")
+    return result #{r[1]: r[0]  for r in result}
 
+# Run the average income for a city and a year                                                                  ==> User Story 1
+  
+@app.get("/average_income_per_year_city/", description="Give the average income for a given year and city")
+async def average_income_per_year_city(city: str, year: str):
+    year = validate_year(year)
+    req_inc_avg = f"SELECT revenu_fiscal_moyen, ville, date FROM foyers_fiscaux WHERE date LIKE '%{year}%' AND ville LIKE '{city}%'"
+    return execute_result_query_SQL(con, req_inc_avg)
 
-@app.get("/transactions_per_city/")
-async def transactions_per_city(city: str):
-    #if not limit_number.isdigit() :
-    #    raise HTTPException(status_code=400, detail="le nombre de transaction doit être un chiffre")
-    #return int(limit_number)
+# Run the number of transactions per city in descending order limited by a number of lines                      ==> User Story 2
+
+@app.get("/transactions_per_city/", description="Give the complete transactions for a given city and to a limit number")
+async def transactions_per_city(city: str, limit_number: str):
+    limit = valid_number(limit_number)
     city = city.upper()
-    cur = con.cursor()
-    req2 = f"SELECT * FROM transactions_sample WHERE ville LIKE '{city}%' ORDER BY date_transaction DESC LIMIT 10"
-    cur.execute(req2)
-    result2 = cur.fetchall()  # Récupère les résultats de la requête
-    if result2 is None:
-        return "No data found for city"
-    else:
-        return result2
-    
+    req_transac = f"SELECT * FROM transactions_sample WHERE ville LIKE '{city}%' ORDER BY date_transaction DESC LIMIT {limit}"
+    return execute_result_query_SQL(con,req_transac)
+
+# Run the number of sells per city per year                                                                     ==> User Story 3
+
+@app.get("/sales_per_city/", description="Give the number of acquisitions for a given city and a given year")
+async def sales_per_city(city: str, year: str):
+    city = city.upper()
+    year = validate_year(year)
+    req_sales = f"SELECT COUNT(id_transaction) FROM transactions_sample WHERE ville LIKE '{city}%' AND date_transaction LIKE '{year}%'"
+    return execute_result_query_SQL(con,req_sales)
+
+#  Run the average price/squaremeter for the building type sold on a given year                                  ==> User Story 4
+
+@app.get("/average_price_m2_per_type_per_year/", description="Give the average price/squaremeter sold on a given year for a given type of buildings")
+async def avg_price_m2_per_type(year: str, buiding_type: str):
+    year = validate_year(year)
+    building_type = validate_build_type(buiding_type)
+    req_avg_price_m2_per_type = f"SELECT type_batiment, AVG(prix/surface_habitable) FROM transactions_sample WHERE date_transaction LIKE '{year}%' AND UPPER(type_batiment) = '{building_type}'"
+    return execute_result_query_SQL(con,req_avg_price_m2_per_type)
+
+# Run the number of single room flat (studio) sold for a given city year                                        ==> User Story 5
+
+@app.get("/sales_studio_per_city/", description="Give the number of single room flat (studio) sold on a given city and year")
+async def sales_studio_per_city(city: str, year: str):
+    city = city.upper()
+    year = validate_year(year)
+    req_sales_studio_per_city = f"SELECT COUNT(*) FROM transactions_sample WHERE ville LIKE '{city}%' AND date_transaction LIKE '{year}%' AND n_pieces <2"
+    return execute_result_query_SQL(con,req_sales_studio_per_city)
+
+
+# Run the split of rooms per appartment and houses sold on a given city                                        ==> User Story 6
+
+@app.get("/sales_type_per_city/", description="Give the type of what king of goods have been sold on a given year and city")
+async def sales_type_per_city(city: str):
+    city = city.upper()
+    req_sales_type_per_room = f"SELECT ville, type_batiment, n_pieces, COUNT(*) FROM transactions_sample WHERE ville LIKE '{city}%'  GROUP BY n_pieces ORDER BY n_pieces"
+    return execute_result_query_SQL(con,req_sales_type_per_room)
+
 uvicorn.run(app)
-
-
-
-# #         Ma version qui ne fonctionne pas ...from fastapi import FastAPI
-#             import uvicorn
-
-#             app = FastAPI()
-
-#             @app.get("/revenu_fiscal_moyen/")
-#             async def revenu_fiscal_moyen(year: int, city: str):
-#             if year is > 1900 OR year is < DATEADD(year, -1, GETDATE()) :
-#             then return f"SELECT revenu_fiscal_moyen, date, ville FROM foyers_fiscaux WHERE date LIKE '{year}' AND ville LIKE '{city}'"
-#             else raise ("L'année n'est pas au bon format ou ne renvoie pas de données")
+con.close()  
