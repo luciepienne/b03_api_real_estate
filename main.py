@@ -1,35 +1,32 @@
 from fastapi import FastAPI, HTTPException
 import uvicorn
 import sqlite3
-from fuzzywuzzy import fuzz 
+from fuzzywuzzy import fuzz #to find most similar building types see def validate_build_type 
 
 app = FastAPI()
 
 db = "Chinook.db"
 con = sqlite3.connect(db)
 
-# Def validate_year as a year of 4 digits and integer.
- 
+# Def validate_year as a year of 4 digits and integer. 
 def validate_year(year: str): 
     if not year.isdigit() or not (len(year) == 4) :
         raise HTTPException(status_code=400, detail="The year should be a 4 digit number")
     return int(year)
 
-# Def valid_number as an integer. 
-
-def valid_number(n: str): 
+# Def validate_number as an integer. 
+def validate_number(n: str): 
     if not n.isdigit() :
         raise HTTPException(status_code=400, detail="The given data is not an integer")
     return int(n)
 
 # # Def valid building type as appartement or maison or looking like. 
-
 def validate_build_type(building_type: str): 
     valid_building_types = ['APPARTEMENT', 'MAISON']
-    most_similar_building_type = max(valid_building_types, key=lambda x: fuzz.ratio(building_type.upper(), x))
-    if most_similar_building_type not in valid_building_types:
+    #most_similar_building_type = max(valid_building_types, key=lambda x: fuzz.ratio(building_type.upper(), x))
+    if building_type.upper() not in valid_building_types:
         raise HTTPException(status_code=400, detail="The given type is not an 'appartement' or a 'maison'")
-    return most_similar_building_type
+    return building_type.upper() #return most_similar_building_type
 
 # Def execute_result_query_SQL as cursor fetchall and result exception condition
 
@@ -38,8 +35,8 @@ def execute_result_query_SQL(con, query):
     cur.execute(query)
     result = cur.fetchall()
     if result is None or len(result) == 0:
-        raise HTTPException(status_code=400, detail="Your query has no result")
-    return result #{r[1]: r[0]  for r in result}
+        raise HTTPException(status_code=404, detail="Your query has no result")
+    return result #return result{r[1]: r[0]  for r in result} to get second column and 1st column of the result
 
 # Run the average income for a city and a year                                                                  ==> User Story 1
   
@@ -53,7 +50,7 @@ async def average_income_per_year_city(city: str, year: str):
 
 @app.get("/transactions_per_city/", description="Give the complete transactions for a given city and to a limit number")
 async def transactions_per_city(city: str, limit_number: str):
-    limit = valid_number(limit_number)
+    limit = validate_number(limit_number)
     city = city.upper()
     req_transac = f"SELECT * FROM transactions_sample WHERE ville LIKE '{city}%' ORDER BY date_transaction DESC LIMIT {limit}"
     return execute_result_query_SQL(con,req_transac)
@@ -70,7 +67,7 @@ async def sales_per_city(city: str, year: str):
 #  Run the average price/squaremeter for the building type sold on a given year                                  ==> User Story 4
 
 @app.get("/average_price_m2_per_type_per_year/", description="Give the average price/squaremeter sold on a given year for a given type of buildings")
-async def avg_price_m2_per_type(year: str, buiding_type: str):
+async def avg_price_m2_per_type(buiding_type: str, year: str):
     year = validate_year(year)
     building_type = validate_build_type(buiding_type)
     req_avg_price_m2_per_type = f"SELECT type_batiment, AVG(prix/surface_habitable) FROM transactions_sample WHERE date_transaction LIKE '{year}%' AND UPPER(type_batiment) = '{building_type}'"
