@@ -82,5 +82,19 @@ async def sales_type_per_city(city: str):
     return execute_result_query_SQL(con,req_sales_type_per_room)
 
 
+# Run the number of sales per city for a given year and maximum income                                         ==> User Story 9
+@app.get("/sales_type_per_year_income_max/", description="gives the number of sales per city for a given year and maximum income")
+async def sales_max_inc(year_ts:str, year_ff: str, income_max:int):
+    year_ff = validate_year(year_ff)
+    year_ts = validate_year(year_ts)
+    #income_max = validate_number(income_max)
+    req_sales_income_max= f"SELECT ts.ville, ts.type_batiment, count(*) FROM transactions_sample ts LEFT JOIN foyers_fiscaux ff ON ts.ville = UPPER(ff.ville) WHERE ff.revenu_fiscal_moyen > '{income_max}' AND ff.date ='{year_ff}' AND ts.date_transaction LIKE '{year_ts}%' GROUP BY ts.ville;"
+    return execute_result_query_SQL(con, req_sales_income_max)
+
+
+
+
+
+
 if __name__ == '__main__':
     uvicorn.run(app) # uniquement si lancement en python
