@@ -1,5 +1,6 @@
 # FastApiBriefRealEstate
-First coding FastAPi request for Real Estate Agency
+
+First coding FastAPi request for a Real Estate Agency.
 
 ***
 
@@ -22,7 +23,10 @@ First coding FastAPi request for Real Estate Agency
 
 ## Overview
 
-This API provides access to real estate transaction data, allowing users to query various aspects such as average revenue, transaction counts, and specific data related to smaller apartments across different cities and years.
+
+- The API is flexible for different cities and years. This project is a Python and SQL library for dealing with data availible for a real estate agency. The objective is to create requests allowing a Director to take the right decisions where to implement his/her real estate agencies. These are the first requests to learn FastAPi
+
+- This API provides access to real estate transaction data, allowing users to query various aspects such as average revenue, transaction counts, and specific data related to smaller apartments across different cities and years.
 
 ## How to Run
 
@@ -36,7 +40,6 @@ https://www.kaggle.com/datasets/benoitfavier/immobilier-france/data
 
 
 ***
-
 
 Main entries
 - function to validate year entry : validate_year(year: str) => will return an error detail in case the year is not a 4 digit number
@@ -114,17 +117,17 @@ https://docs.google.com/spreadsheets/d/110DFqhV0eNhR1mzBkRR5DD6Aey-lgXuTlf3VeSzW
 - **Example**: `http://localhost:8000//sales_per_city/?city=Paris&year=2018`
 
 ### 4. Small Apartment Transaction Count
-- **URL**: `/small-apartment-transaction-count`
+- **URL**: `/sales_studio_per_city/`
 - **Method**: `GET`
 - **Query Params**: 
   - `city=[string]` (required)
-  - `year=[integer]` (required)
+  - `year=[string]` (required)
 - **Success Response**: JSON object with small apartment transaction count.
 - **Error Response**: 
   - 400 Bad Request if year is invalid
   - 404 Not Found if no data is found
   - 500 Internal Server Error for other issues
-- **Example**: `http://localhost:8000/small-apartment-transaction-count?city=Marseille&year=2021`
+- **Example**: `http://localhost:8000/sales_studio_per_city/?city=Paris&year=2018`
 
 ### 5. Count Small Apartments
 - **URL**: `/count-small-apartments`
@@ -187,30 +190,26 @@ https://docs.google.com/spreadsheets/d/110DFqhV0eNhR1mzBkRR5DD6Aey-lgXuTlf3VeSzW
 
 ***
 
-
-
 ## Notes
 
 - The database sample used is `Chinook.db`.
 - Comprehensive error handling is implemented.
-- The API is flexible for different cities and years.Projet Agence Immo is a Python and SQL library for dealing with data availible for a real estate agency. The objective is to create requests allowing a Director to take the right decisions where to implement his/her real estate agencies. These are the first requests to learn FastAPi
 
 
-```
 
-
-FastApi should be used as such.
+***
 
 
 ## Usage
-python VS Code Fast Api
-internal usage only. for training only
-```
 
-Contributing
+internal usage only. for training only
+
+
+## Contributing
 Pull requests are welcome. For major changes, please open an issue first
 to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
 
-License
+
+***
